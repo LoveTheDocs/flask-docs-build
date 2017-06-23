@@ -1,0 +1,287 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Signals &#8212; Flask 0.12.2 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.12.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="shortcut icon" href="_static/flask-favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Pluggable Views" href="views.html" />
+    <link rel="prev" title="Configuration Handling" href="config.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+    <link rel="apple-touch-icon" href="_static/touch-icon.png" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="signals">
+<span id="id1"></span><h1>Signals<a class="headerlink" href="#signals" title="Permalink to this headline">¶</a></h1>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 0.6.</span></p>
+</div>
+<p>Starting with Flask 0.6, there is integrated support for signalling in
+Flask.  This support is provided by the excellent <a class="reference external" href="https://pypi.python.org/pypi/blinker">blinker</a> library and
+will gracefully fall back if it is not available.</p>
+<p>What are signals?  Signals help you decouple applications by sending
+notifications when actions occur elsewhere in the core framework or
+another Flask extensions.  In short, signals allow certain senders to
+notify subscribers that something happened.</p>
+<p>Flask comes with a couple of signals and other extensions might provide
+more.  Also keep in mind that signals are intended to notify subscribers
+and should not encourage subscribers to modify data.  You will notice that
+there are signals that appear to do the same thing like some of the
+builtin decorators do (eg: <a class="reference internal" href="api.html#flask.request_started" title="flask.request_started"><code class="xref py py-data docutils literal"><span class="pre">request_started</span></code></a> is very similar
+to <a class="reference internal" href="api.html#flask.Flask.before_request" title="flask.Flask.before_request"><code class="xref py py-meth docutils literal"><span class="pre">before_request()</span></code></a>).  However, there are differences in
+how they work.  The core <a class="reference internal" href="api.html#flask.Flask.before_request" title="flask.Flask.before_request"><code class="xref py py-meth docutils literal"><span class="pre">before_request()</span></code></a> handler, for
+example, is executed in a specific order and is able to abort the request
+early by returning a response.  In contrast all signal handlers are
+executed in undefined order and do not modify any data.</p>
+<p>The big advantage of signals over handlers is that you can safely
+subscribe to them for just a split second.  These temporary
+subscriptions are helpful for unit testing for example.  Say you want to
+know what templates were rendered as part of a request: signals allow you
+to do exactly that.</p>
+<div class="section" id="subscribing-to-signals">
+<h2>Subscribing to Signals<a class="headerlink" href="#subscribing-to-signals" title="Permalink to this headline">¶</a></h2>
+<p>To subscribe to a signal, you can use the
+<a class="reference external" href="https://pythonhosted.org/blinker/index.html#blinker.base.Signal.connect" title="(in Blinker v1.4)"><code class="xref py py-meth docutils literal"><span class="pre">connect()</span></code></a> method of a signal.  The first
+argument is the function that should be called when the signal is emitted,
+the optional second argument specifies a sender.  To unsubscribe from a
+signal, you can use the <a class="reference external" href="https://pythonhosted.org/blinker/index.html#blinker.base.Signal.disconnect" title="(in Blinker v1.4)"><code class="xref py py-meth docutils literal"><span class="pre">disconnect()</span></code></a> method.</p>
+<p>For all core Flask signals, the sender is the application that issued the
+signal.  When you subscribe to a signal, be sure to also provide a sender
+unless you really want to listen for signals from all applications.  This is
+especially true if you are developing an extension.</p>
+<p>For example, here is a helper context manager that can be used in a unit test
+to determine which templates were rendered and what variables were passed
+to the template:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">flask</span> <span class="k">import</span> <span class="n">template_rendered</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="k">import</span> <span class="n">contextmanager</span>
+
+<span class="nd">@contextmanager</span>
+<span class="k">def</span> <span class="nf">captured_templates</span><span class="p">(</span><span class="n">app</span><span class="p">):</span>
+    <span class="n">recorded</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">def</span> <span class="nf">record</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="o">**</span><span class="n">extra</span><span class="p">):</span>
+        <span class="n">recorded</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">template</span><span class="p">,</span> <span class="n">context</span><span class="p">))</span>
+    <span class="n">template_rendered</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">recorded</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">template_rendered</span><span class="o">.</span><span class="n">disconnect</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This can now easily be paired with a test client:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">captured_templates</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">templates</span><span class="p">:</span>
+    <span class="n">rv</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">test_client</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">rv</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">templates</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="n">template</span><span class="p">,</span> <span class="n">context</span> <span class="o">=</span> <span class="n">templates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="n">template</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;index.html&#39;</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">context</span><span class="p">[</span><span class="s1">&#39;items&#39;</span><span class="p">])</span> <span class="o">==</span> <span class="mi">10</span>
+</pre></div>
+</div>
+<p>Make sure to subscribe with an extra <code class="docutils literal"><span class="pre">**extra</span></code> argument so that your
+calls don’t fail if Flask introduces new arguments to the signals.</p>
+<p>All the template rendering in the code issued by the application <cite>app</cite>
+in the body of the <code class="docutils literal"><span class="pre">with</span></code> block will now be recorded in the <cite>templates</cite>
+variable.  Whenever a template is rendered, the template object as well as
+context are appended to it.</p>
+<p>Additionally there is a convenient helper method
+(<a class="reference external" href="https://pythonhosted.org/blinker/index.html#blinker.base.Signal.connected_to" title="(in Blinker v1.4)"><code class="xref py py-meth docutils literal"><span class="pre">connected_to()</span></code></a>)  that allows you to
+temporarily subscribe a function to a signal with a context manager on
+its own.  Because the return value of the context manager cannot be
+specified that way, you have to pass the list in as an argument:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">flask</span> <span class="k">import</span> <span class="n">template_rendered</span>
+
+<span class="k">def</span> <span class="nf">captured_templates</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">recorded</span><span class="p">,</span> <span class="o">**</span><span class="n">extra</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">record</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="n">recorded</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">template</span><span class="p">,</span> <span class="n">context</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">template_rendered</span><span class="o">.</span><span class="n">connected_to</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The example above would then look like this:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">templates</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">with</span> <span class="n">captured_templates</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">templates</span><span class="p">,</span> <span class="o">**</span><span class="n">extra</span><span class="p">):</span>
+    <span class="o">...</span>
+    <span class="n">template</span><span class="p">,</span> <span class="n">context</span> <span class="o">=</span> <span class="n">templates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+<div class="admonition-blinker-api-changes admonition">
+<p class="first admonition-title">Blinker API Changes</p>
+<p class="last">The <a class="reference external" href="https://pythonhosted.org/blinker/index.html#blinker.base.Signal.connected_to" title="(in Blinker v1.4)"><code class="xref py py-meth docutils literal"><span class="pre">connected_to()</span></code></a> method arrived in Blinker
+with version 1.1.</p>
+</div>
+</div>
+<div class="section" id="creating-signals">
+<h2>Creating Signals<a class="headerlink" href="#creating-signals" title="Permalink to this headline">¶</a></h2>
+<p>If you want to use signals in your own application, you can use the
+blinker library directly.  The most common use case are named signals in a
+custom <a class="reference external" href="https://pythonhosted.org/blinker/index.html#blinker.base.Namespace" title="(in Blinker v1.4)"><code class="xref py py-class docutils literal"><span class="pre">Namespace</span></code></a>..  This is what is recommended
+most of the time:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">blinker</span> <span class="k">import</span> <span class="n">Namespace</span>
+<span class="n">my_signals</span> <span class="o">=</span> <span class="n">Namespace</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Now you can create new signals like this:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">model_saved</span> <span class="o">=</span> <span class="n">my_signals</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="s1">&#39;model-saved&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The name for the signal here makes it unique and also simplifies
+debugging.  You can access the name of the signal with the
+<a class="reference external" href="https://pythonhosted.org/blinker/index.html#blinker.base.NamedSignal.name" title="(in Blinker v1.4)"><code class="xref py py-attr docutils literal"><span class="pre">name</span></code></a> attribute.</p>
+<div class="admonition-for-extension-developers admonition">
+<p class="first admonition-title">For Extension Developers</p>
+<p class="last">If you are writing a Flask extension and you want to gracefully degrade for
+missing blinker installations, you can do so by using the
+<a class="reference internal" href="api.html#flask.signals.Namespace" title="flask.signals.Namespace"><code class="xref py py-class docutils literal"><span class="pre">flask.signals.Namespace</span></code></a> class.</p>
+</div>
+</div>
+<div class="section" id="sending-signals">
+<span id="signals-sending"></span><h2>Sending Signals<a class="headerlink" href="#sending-signals" title="Permalink to this headline">¶</a></h2>
+<p>If you want to emit a signal, you can do so by calling the
+<a class="reference external" href="https://pythonhosted.org/blinker/index.html#blinker.base.Signal.send" title="(in Blinker v1.4)"><code class="xref py py-meth docutils literal"><span class="pre">send()</span></code></a> method.  It accepts a sender as first
+argument and optionally some keyword arguments that are forwarded to the
+signal subscribers:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Model</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="o">...</span>
+
+    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">model_saved</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Try to always pick a good sender.  If you have a class that is emitting a
+signal, pass <code class="docutils literal"><span class="pre">self</span></code> as sender.  If you are emitting a signal from a random
+function, you can pass <code class="docutils literal"><span class="pre">current_app._get_current_object()</span></code> as sender.</p>
+<div class="admonition-passing-proxies-as-senders admonition">
+<p class="first admonition-title">Passing Proxies as Senders</p>
+<p class="last">Never pass <a class="reference internal" href="api.html#flask.current_app" title="flask.current_app"><code class="xref py py-data docutils literal"><span class="pre">current_app</span></code></a> as sender to a signal.  Use
+<code class="docutils literal"><span class="pre">current_app._get_current_object()</span></code> instead.  The reason for this is
+that <a class="reference internal" href="api.html#flask.current_app" title="flask.current_app"><code class="xref py py-data docutils literal"><span class="pre">current_app</span></code></a> is a proxy and not the real application
+object.</p>
+</div>
+</div>
+<div class="section" id="signals-and-flask-s-request-context">
+<h2>Signals and Flask’s Request Context<a class="headerlink" href="#signals-and-flask-s-request-context" title="Permalink to this headline">¶</a></h2>
+<p>Signals fully support <a class="reference internal" href="reqcontext.html#request-context"><span class="std std-ref">The Request Context</span></a> when receiving signals.
+Context-local variables are consistently available between
+<a class="reference internal" href="api.html#flask.request_started" title="flask.request_started"><code class="xref py py-data docutils literal"><span class="pre">request_started</span></code></a> and <a class="reference internal" href="api.html#flask.request_finished" title="flask.request_finished"><code class="xref py py-data docutils literal"><span class="pre">request_finished</span></code></a>, so you can
+rely on <a class="reference internal" href="api.html#flask.g" title="flask.g"><code class="xref py py-class docutils literal"><span class="pre">flask.g</span></code></a> and others as needed.  Note the limitations described
+in <a class="reference internal" href="#signals-sending"><span class="std std-ref">Sending Signals</span></a> and the <a class="reference internal" href="api.html#flask.request_tearing_down" title="flask.request_tearing_down"><code class="xref py py-data docutils literal"><span class="pre">request_tearing_down</span></code></a> signal.</p>
+</div>
+<div class="section" id="decorator-based-signal-subscriptions">
+<h2>Decorator Based Signal Subscriptions<a class="headerlink" href="#decorator-based-signal-subscriptions" title="Permalink to this headline">¶</a></h2>
+<p>With Blinker 1.1 you can also easily subscribe to signals by using the new
+<code class="xref py py-meth docutils literal"><span class="pre">connect_via()</span></code> decorator:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">flask</span> <span class="k">import</span> <span class="n">template_rendered</span>
+
+<span class="nd">@template_rendered</span><span class="o">.</span><span class="n">connect_via</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">when_template_rendered</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="o">**</span><span class="n">extra</span><span class="p">):</span>
+    <span class="nb">print</span> <span class="s1">&#39;Template </span><span class="si">%s</span><span class="s1"> is rendered with </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">template</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="core-signals">
+<h2>Core Signals<a class="headerlink" href="#core-signals" title="Permalink to this headline">¶</a></h2>
+<p>Take a look at <a class="reference internal" href="api.html#core-signals-list"><span class="std std-ref">Signals</span></a> for a list of all builtin signals.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><p class="logo"><a href="index.html">
+  <img class="logo" src="_static/flask.png" alt="Logo"/>
+</a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Signals</a><ul>
+<li><a class="reference internal" href="#subscribing-to-signals">Subscribing to Signals</a></li>
+<li><a class="reference internal" href="#creating-signals">Creating Signals</a></li>
+<li><a class="reference internal" href="#sending-signals">Sending Signals</a></li>
+<li><a class="reference internal" href="#signals-and-flask-s-request-context">Signals and Flask’s Request Context</a></li>
+<li><a class="reference internal" href="#decorator-based-signal-subscriptions">Decorator Based Signal Subscriptions</a></li>
+<li><a class="reference internal" href="#core-signals">Core Signals</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="config.html" title="previous chapter">Configuration Handling</a></li>
+      <li>Next: <a href="views.html" title="next chapter">Pluggable Views</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/signals.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2010 - 2017, Armin Ronacher.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/signals.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

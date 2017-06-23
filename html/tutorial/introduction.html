@@ -1,0 +1,129 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Introducing Flaskr &#8212; Flask 0.12.2 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.12.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../_static/flask-favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Step 0: Creating The Folders" href="folders.html" />
+    <link rel="prev" title="Tutorial" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+    <link rel="apple-touch-icon" href="../_static/touch-icon.png" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="introducing-flaskr">
+<span id="tutorial-introduction"></span><h1>Introducing Flaskr<a class="headerlink" href="#introducing-flaskr" title="Permalink to this headline">¶</a></h1>
+<p>This tutorial will demonstrate a blogging application named Flaskr, but feel
+free to choose your own less Web-2.0-ish name ;)  Essentially, it will do the
+following things:</p>
+<ol class="arabic simple">
+<li>Let the user sign in and out with credentials specified in the
+configuration.  Only one user is supported.</li>
+<li>When the user is logged in, they can add new entries to the page
+consisting of a text-only title and some HTML for the text.  This HTML
+is not sanitized because we trust the user here.</li>
+<li>The index page shows all entries so far in reverse chronological order
+(newest on top) and the user can add new ones from there if logged in.</li>
+</ol>
+<p>SQLite3 will be used directly for this application because it’s good enough
+for an application of this size.  For larger applications, however,
+it makes a lot of sense to use <a class="reference external" href="https://www.sqlalchemy.org/">SQLAlchemy</a>, as it handles database
+connections in a more intelligent way, allowing you to target different
+relational databases at once and more.  You might also want to consider
+one of the popular NoSQL databases if your data is more suited for those.</p>
+<p>Here is a screenshot of the final application:</p>
+<img alt="screenshot of the final application" class="screenshot align-center" src="../_images/flaskr.png" />
+<p>Continue with <a class="reference internal" href="folders.html#tutorial-folders"><span class="std std-ref">Step 0: Creating The Folders</span></a>.</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><p class="logo"><a href="../index.html">
+  <img class="logo" src="../_static/flask.png" alt="Logo"/>
+</a></p><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Tutorial</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Tutorial</a></li>
+      <li>Next: <a href="folders.html" title="next chapter">Step 0: Creating The Folders</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/tutorial/introduction.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2010 - 2017, Armin Ronacher.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="../_sources/tutorial/introduction.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

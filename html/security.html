@@ -1,0 +1,322 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Security Considerations &#8212; Flask 0.12.2 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.12.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="shortcut icon" href="_static/flask-favicon.ico"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Unicode in Flask" href="unicode.html" />
+    <link rel="prev" title="HTML/XHTML FAQ" href="htmlfaq.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+    <link rel="apple-touch-icon" href="_static/touch-icon.png" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="security-considerations">
+<h1>Security Considerations<a class="headerlink" href="#security-considerations" title="Permalink to this headline">¶</a></h1>
+<p>Web applications usually face all kinds of security problems and it’s very
+hard to get everything right.  Flask tries to solve a few of these things
+for you, but there are a couple more you have to take care of yourself.</p>
+<div class="section" id="cross-site-scripting-xss">
+<span id="xss"></span><h2>Cross-Site Scripting (XSS)<a class="headerlink" href="#cross-site-scripting-xss" title="Permalink to this headline">¶</a></h2>
+<p>Cross site scripting is the concept of injecting arbitrary HTML (and with
+it JavaScript) into the context of a website.  To remedy this, developers
+have to properly escape text so that it cannot include arbitrary HTML
+tags.  For more information on that have a look at the Wikipedia article
+on <a class="reference external" href="https://en.wikipedia.org/wiki/Cross-site_scripting">Cross-Site Scripting</a>.</p>
+<p>Flask configures Jinja2 to automatically escape all values unless
+explicitly told otherwise.  This should rule out all XSS problems caused
+in templates, but there are still other places where you have to be
+careful:</p>
+<ul class="simple">
+<li>generating HTML without the help of Jinja2</li>
+<li>calling <a class="reference internal" href="api.html#flask.Markup" title="flask.Markup"><code class="xref py py-class docutils literal"><span class="pre">Markup</span></code></a> on data submitted by users</li>
+<li>sending out HTML from uploaded files, never do that, use the
+<code class="docutils literal"><span class="pre">Content-Disposition:</span> <span class="pre">attachment</span></code> header to prevent that problem.</li>
+<li>sending out textfiles from uploaded files.  Some browsers are using
+content-type guessing based on the first few bytes so users could
+trick a browser to execute HTML.</li>
+</ul>
+<p>Another thing that is very important are unquoted attributes.  While
+Jinja2 can protect you from XSS issues by escaping HTML, there is one
+thing it cannot protect you from: XSS by attribute injection.  To counter
+this possible attack vector, be sure to always quote your attributes with
+either double or single quotes when using Jinja expressions in them:</p>
+<div class="highlight-html+jinja"><div class="highlight"><pre><span></span><span class="p">&lt;</span><span class="nt">input</span> <span class="na">value</span><span class="o">=</span><span class="s">&quot;</span><span class="cp">{{</span> <span class="nv">value</span> <span class="cp">}}</span><span class="s">&quot;</span><span class="p">&gt;</span>
+</pre></div>
+</div>
+<p>Why is this necessary?  Because if you would not be doing that, an
+attacker could easily inject custom JavaScript handlers.  For example an
+attacker could inject this piece of HTML+JavaScript:</p>
+<div class="highlight-html"><div class="highlight"><pre><span></span>onmouseover=alert(document.cookie)
+</pre></div>
+</div>
+<p>When the user would then move with the mouse over the input, the cookie
+would be presented to the user in an alert window.  But instead of showing
+the cookie to the user, a good attacker might also execute any other
+JavaScript code.  In combination with CSS injections the attacker might
+even make the element fill out the entire page so that the user would
+just have to have the mouse anywhere on the page to trigger the attack.</p>
+<p>There is one class of XSS issues that Jinja’s escaping does not protect
+against. The <code class="docutils literal"><span class="pre">a</span></code> tag’s <code class="docutils literal"><span class="pre">href</span></code> attribute can contain a <cite>javascript:</cite> URI,
+which the browser will execute when clicked if not secured properly.</p>
+<div class="highlight-html"><div class="highlight"><pre><span></span><span class="p">&lt;</span><span class="nt">a</span> <span class="na">href</span><span class="o">=</span><span class="s">&quot;{{ value }}&quot;</span><span class="p">&gt;</span>click here<span class="p">&lt;/</span><span class="nt">a</span><span class="p">&gt;</span>
+<span class="p">&lt;</span><span class="nt">a</span> <span class="na">href</span><span class="o">=</span><span class="s">&quot;javascript:alert(&#39;unsafe&#39;);&quot;</span><span class="p">&gt;</span>click here<span class="p">&lt;/</span><span class="nt">a</span><span class="p">&gt;</span>
+</pre></div>
+</div>
+<p>To prevent this, you’ll need to set the <a class="reference internal" href="#security-csp"><span class="std std-ref">Content Security Policy (CSP)</span></a> response header.</p>
+</div>
+<div class="section" id="cross-site-request-forgery-csrf">
+<h2>Cross-Site Request Forgery (CSRF)<a class="headerlink" href="#cross-site-request-forgery-csrf" title="Permalink to this headline">¶</a></h2>
+<p>Another big problem is CSRF.  This is a very complex topic and I won’t
+outline it here in detail just mention what it is and how to theoretically
+prevent it.</p>
+<p>If your authentication information is stored in cookies, you have implicit
+state management.  The state of “being logged in” is controlled by a
+cookie, and that cookie is sent with each request to a page.
+Unfortunately that includes requests triggered by 3rd party sites.  If you
+don’t keep that in mind, some people might be able to trick your
+application’s users with social engineering to do stupid things without
+them knowing.</p>
+<p>Say you have a specific URL that, when you sent <code class="docutils literal"><span class="pre">POST</span></code> requests to will
+delete a user’s profile (say <code class="docutils literal"><span class="pre">http://example.com/user/delete</span></code>).  If an
+attacker now creates a page that sends a post request to that page with
+some JavaScript they just have to trick some users to load that page and
+their profiles will end up being deleted.</p>
+<p>Imagine you were to run Facebook with millions of concurrent users and
+someone would send out links to images of little kittens.  When users
+would go to that page, their profiles would get deleted while they are
+looking at images of fluffy cats.</p>
+<p>How can you prevent that?  Basically for each request that modifies
+content on the server you would have to either use a one-time token and
+store that in the cookie <strong>and</strong> also transmit it with the form data.
+After receiving the data on the server again, you would then have to
+compare the two tokens and ensure they are equal.</p>
+<p>Why does Flask not do that for you?  The ideal place for this to happen is
+the form validation framework, which does not exist in Flask.</p>
+</div>
+<div class="section" id="json-security">
+<span id="id1"></span><h2>JSON Security<a class="headerlink" href="#json-security" title="Permalink to this headline">¶</a></h2>
+<p>In Flask 0.10 and lower, <code class="xref py py-func docutils literal"><span class="pre">jsonify()</span></code> did not serialize top-level
+arrays to JSON. This was because of a security vulnerability in ECMAScript 4.</p>
+<p>ECMAScript 5 closed this vulnerability, so only extremely old browsers are
+still vulnerable. All of these browsers have <a class="reference external" href="https://github.com/pallets/flask/issues/248#issuecomment-59934857">other more serious
+vulnerabilities</a>, so
+this behavior was changed and <code class="xref py py-func docutils literal"><span class="pre">jsonify()</span></code> now supports serializing
+arrays.</p>
+</div>
+<div class="section" id="security-headers">
+<h2>Security Headers<a class="headerlink" href="#security-headers" title="Permalink to this headline">¶</a></h2>
+<p>Browsers recognize various response headers in order to control security. We
+recommend reviewing each of the headers below for use in your application.
+The <a class="reference external" href="https://github.com/GoogleCloudPlatform/flask-talisman">Flask-Talisman</a> extension can be used to manage HTTPS and the security
+headers for you.</p>
+<div class="section" id="http-strict-transport-security-hsts">
+<h3>HTTP Strict Transport Security (HSTS)<a class="headerlink" href="#http-strict-transport-security-hsts" title="Permalink to this headline">¶</a></h3>
+<p>Tells the browser to convert all HTTP requests to HTTPS, preventing
+man-in-the-middle (MITM) attacks.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">response</span><span class="o">.</span><span class="n">haders</span><span class="p">[</span><span class="s1">&#39;Strict-Transport-Security&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;max-age=31536000; includeSubDomains&#39;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security">https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security</a></li>
+</ul>
+</div>
+<div class="section" id="content-security-policy-csp">
+<span id="security-csp"></span><h3>Content Security Policy (CSP)<a class="headerlink" href="#content-security-policy-csp" title="Permalink to this headline">¶</a></h3>
+<p>Tell the browser where it can load various types of resource from. This header
+should be used whenever possible, but requires some work to define the correct
+policy for your site. A very strict policy would be:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s1">&#39;Content-Security-Policy&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;default-src &#39;self&#39;&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://csp.withgoogle.com/docs/index.html">https://csp.withgoogle.com/docs/index.html</a></li>
+<li><a class="reference external" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy">https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy</a></li>
+</ul>
+</div>
+<div class="section" id="x-content-type-options">
+<h3>X-Content-Type-Options<a class="headerlink" href="#x-content-type-options" title="Permalink to this headline">¶</a></h3>
+<p>Forces the browser to honor the response content type instead of trying to
+detect it, which can be abused to generate a cross-site scripting (XSS)
+attack.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s1">&#39;X-Content-Type-Options&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;nosniff&#39;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options">https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options</a></li>
+</ul>
+</div>
+<div class="section" id="x-frame-options">
+<h3>X-Frame-Options<a class="headerlink" href="#x-frame-options" title="Permalink to this headline">¶</a></h3>
+<p>Prevents external sites from embedding your site in an <code class="docutils literal"><span class="pre">iframe</span></code>. This
+prevents a class of attacks where clicks in the outer frame can be translated
+invisibly to clicks on your page’s elements. This is also known as
+“clickjacking”.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s1">&#39;X-Frame-Options&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;SAMEORIGIN&#39;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options">https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options</a></li>
+</ul>
+</div>
+<div class="section" id="x-xss-protection">
+<h3>X-XSS-Protection<a class="headerlink" href="#x-xss-protection" title="Permalink to this headline">¶</a></h3>
+<p>The browser will try to prevent reflected XSS attacks by not loading the page
+if the request contains something that looks like JavaScript and the response
+contains the same data.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s1">&#39;X-XSS-Protection&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1; mode=block&#39;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection">https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection</a></li>
+</ul>
+</div>
+<div class="section" id="set-cookie-options">
+<h3>Set-Cookie options<a class="headerlink" href="#set-cookie-options" title="Permalink to this headline">¶</a></h3>
+<p>These options can be added to a <code class="docutils literal"><span class="pre">Set-Cookie</span></code> header to improve their
+security. Flask has configuration options to set these on the session cookie.
+They can be set on other cookies too.</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">Secure</span></code> limits cookies to HTTPS traffic only.</li>
+<li><code class="docutils literal"><span class="pre">HttpOnly</span></code> protects the contents of cookies from being read with
+JavaScript.</li>
+<li><code class="docutils literal"><span class="pre">SameSite</span></code> ensures that cookies can only be requested from the same
+domain that created them. It is not supported by Flask yet.</li>
+</ul>
+<div class="highlight-default"><div class="highlight"><pre><span></span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+     <span class="n">SESSION_COOKIE_SECURE</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+     <span class="n">SESSION_COOKIE_HTTPONLY</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+ <span class="p">)</span>
+
+<span class="n">response</span><span class="o">.</span><span class="n">set_cookie</span><span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">,</span> <span class="s1">&#39;flask&#39;</span><span class="p">,</span> <span class="n">secure</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">httponly</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#Secure_and_HttpOnly_cookies">https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#Secure_and_HttpOnly_cookies</a></li>
+</ul>
+</div>
+<div class="section" id="http-public-key-pinning-hpkp">
+<h3>HTTP Public Key Pinning (HPKP)<a class="headerlink" href="#http-public-key-pinning-hpkp" title="Permalink to this headline">¶</a></h3>
+<p>This tells the browser to authenticate with the server using only the specific
+certificate key to prevent MITM attacks.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Be careful when enabling this, as it is very difficult to undo if you set up
+or upgrade your key incorrectly.</p>
+</div>
+<ul class="simple">
+<li><a class="reference external" href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Public_Key_Pinning">https://developer.mozilla.org/en-US/docs/Web/HTTP/Public_Key_Pinning</a></li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><p class="logo"><a href="index.html">
+  <img class="logo" src="_static/flask.png" alt="Logo"/>
+</a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Security Considerations</a><ul>
+<li><a class="reference internal" href="#cross-site-scripting-xss">Cross-Site Scripting (XSS)</a></li>
+<li><a class="reference internal" href="#cross-site-request-forgery-csrf">Cross-Site Request Forgery (CSRF)</a></li>
+<li><a class="reference internal" href="#json-security">JSON Security</a></li>
+<li><a class="reference internal" href="#security-headers">Security Headers</a><ul>
+<li><a class="reference internal" href="#http-strict-transport-security-hsts">HTTP Strict Transport Security (HSTS)</a></li>
+<li><a class="reference internal" href="#content-security-policy-csp">Content Security Policy (CSP)</a></li>
+<li><a class="reference internal" href="#x-content-type-options">X-Content-Type-Options</a></li>
+<li><a class="reference internal" href="#x-frame-options">X-Frame-Options</a></li>
+<li><a class="reference internal" href="#x-xss-protection">X-XSS-Protection</a></li>
+<li><a class="reference internal" href="#set-cookie-options">Set-Cookie options</a></li>
+<li><a class="reference internal" href="#http-public-key-pinning-hpkp">HTTP Public Key Pinning (HPKP)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="htmlfaq.html" title="previous chapter">HTML/XHTML FAQ</a></li>
+      <li>Next: <a href="unicode.html" title="next chapter">Unicode in Flask</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/security.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2010 - 2017, Armin Ronacher.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/security.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

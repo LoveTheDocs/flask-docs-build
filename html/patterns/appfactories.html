@@ -1,0 +1,226 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Application Factories &#8212; Flask 0.12.2 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.12.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../_static/flask-favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Application Dispatching" href="appdispatch.html" />
+    <link rel="prev" title="Larger Applications" href="packages.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+    <link rel="apple-touch-icon" href="../_static/touch-icon.png" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="application-factories">
+<span id="app-factories"></span><h1>Application Factories<a class="headerlink" href="#application-factories" title="Permalink to this headline">¶</a></h1>
+<p>If you are already using packages and blueprints for your application
+(<a class="reference internal" href="../blueprints.html#blueprints"><span class="std std-ref">Modular Applications with Blueprints</span></a>) there are a couple of really nice ways to further improve
+the experience.  A common pattern is creating the application object when
+the blueprint is imported.  But if you move the creation of this object
+into a function, you can then create multiple instances of this app later.</p>
+<p>So why would you want to do this?</p>
+<ol class="arabic simple">
+<li>Testing.  You can have instances of the application with different
+settings to test every case.</li>
+<li>Multiple instances.  Imagine you want to run different versions of the
+same application.  Of course you could have multiple instances with
+different configs set up in your webserver, but if you use factories,
+you can have multiple instances of the same application running in the
+same application process which can be handy.</li>
+</ol>
+<p>So how would you then actually implement that?</p>
+<div class="section" id="basic-factories">
+<h2>Basic Factories<a class="headerlink" href="#basic-factories" title="Permalink to this headline">¶</a></h2>
+<p>The idea is to set up the application in a function.  Like this:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">create_app</span><span class="p">(</span><span class="n">config_filename</span><span class="p">):</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">from_pyfile</span><span class="p">(</span><span class="n">config_filename</span><span class="p">)</span>
+
+    <span class="kn">from</span> <span class="nn">yourapplication.model</span> <span class="k">import</span> <span class="n">db</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">init_app</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+
+    <span class="kn">from</span> <span class="nn">yourapplication.views.admin</span> <span class="k">import</span> <span class="n">admin</span>
+    <span class="kn">from</span> <span class="nn">yourapplication.views.frontend</span> <span class="k">import</span> <span class="n">frontend</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">register_blueprint</span><span class="p">(</span><span class="n">admin</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">register_blueprint</span><span class="p">(</span><span class="n">frontend</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">app</span>
+</pre></div>
+</div>
+<p>The downside is that you cannot use the application object in the blueprints
+at import time.  You can however use it from within a request.  How do you
+get access to the application with the config?  Use
+<a class="reference internal" href="../api.html#flask.current_app" title="flask.current_app"><code class="xref py py-data docutils literal"><span class="pre">current_app</span></code></a>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">flask</span> <span class="k">import</span> <span class="n">current_app</span><span class="p">,</span> <span class="n">Blueprint</span><span class="p">,</span> <span class="n">render_template</span>
+<span class="n">admin</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="s1">&#39;admin&#39;</span><span class="p">,</span> <span class="vm">__name__</span><span class="p">,</span> <span class="n">url_prefix</span><span class="o">=</span><span class="s1">&#39;/admin&#39;</span><span class="p">)</span>
+
+<span class="nd">@admin</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="n">current_app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;INDEX_TEMPLATE&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>Here we look up the name of a template in the config.</p>
+</div>
+<div class="section" id="factories-extensions">
+<h2>Factories &amp; Extensions<a class="headerlink" href="#factories-extensions" title="Permalink to this headline">¶</a></h2>
+<p>It’s preferable to create your extensions and app factories so that the
+extension object does not initially get bound to the application.</p>
+<p>Using <a class="reference external" href="http://flask-sqlalchemy.pocoo.org/">Flask-SQLAlchemy</a>,
+as an example, you should not do something along those lines:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">create_app</span><span class="p">(</span><span class="n">config_filename</span><span class="p">):</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">from_pyfile</span><span class="p">(</span><span class="n">config_filename</span><span class="p">)</span>
+
+    <span class="n">db</span> <span class="o">=</span> <span class="n">SQLAlchemy</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>But, rather, in model.py (or equivalent):</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">db</span> <span class="o">=</span> <span class="n">SQLAlchemy</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>and in your application.py (or equivalent):</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">create_app</span><span class="p">(</span><span class="n">config_filename</span><span class="p">):</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">from_pyfile</span><span class="p">(</span><span class="n">config_filename</span><span class="p">)</span>
+
+    <span class="kn">from</span> <span class="nn">yourapplication.model</span> <span class="k">import</span> <span class="n">db</span>
+    <span class="n">db</span><span class="o">.</span><span class="n">init_app</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Using this design pattern, no application-specific state is stored on the
+extension object, so one extension object can be used for multiple apps.
+For more information about the design of extensions refer to <a class="reference internal" href="../extensiondev.html"><span class="doc">Flask Extension Development</span></a>.</p>
+</div>
+<div class="section" id="using-applications">
+<h2>Using Applications<a class="headerlink" href="#using-applications" title="Permalink to this headline">¶</a></h2>
+<p>So to use such an application you then have to create the application
+first in a separate file otherwise the <strong class="command">flask</strong> command won’t be able
+to find it.  Here an example <code class="file docutils literal"><span class="pre">exampleapp.py</span></code> file that creates such
+an application:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">yourapplication</span> <span class="k">import</span> <span class="n">create_app</span>
+<span class="n">app</span> <span class="o">=</span> <span class="n">create_app</span><span class="p">(</span><span class="s1">&#39;/path/to/config.cfg&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>It can then be used with the <strong class="command">flask</strong> command:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">export</span> <span class="n">FLASK_APP</span><span class="o">=</span><span class="n">exampleapp</span>
+<span class="n">flask</span> <span class="n">run</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="factory-improvements">
+<h2>Factory Improvements<a class="headerlink" href="#factory-improvements" title="Permalink to this headline">¶</a></h2>
+<p>The factory function from above is not very clever so far, you can improve
+it.  The following changes are straightforward and possible:</p>
+<ol class="arabic simple">
+<li>make it possible to pass in configuration values for unittests so that
+you don’t have to create config files on the filesystem</li>
+<li>call a function from a blueprint when the application is setting up so
+that you have a place to modify attributes of the application (like
+hooking in before / after request handlers etc.)</li>
+<li>Add in WSGI middlewares when the application is creating if necessary.</li>
+</ol>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><p class="logo"><a href="../index.html">
+  <img class="logo" src="../_static/flask.png" alt="Logo"/>
+</a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Application Factories</a><ul>
+<li><a class="reference internal" href="#basic-factories">Basic Factories</a></li>
+<li><a class="reference internal" href="#factories-extensions">Factories &amp; Extensions</a></li>
+<li><a class="reference internal" href="#using-applications">Using Applications</a></li>
+<li><a class="reference internal" href="#factory-improvements">Factory Improvements</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Patterns for Flask</a><ul>
+      <li>Previous: <a href="packages.html" title="previous chapter">Larger Applications</a></li>
+      <li>Next: <a href="appdispatch.html" title="next chapter">Application Dispatching</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/patterns/appfactories.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2010 - 2017, Armin Ronacher.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="../_sources/patterns/appfactories.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

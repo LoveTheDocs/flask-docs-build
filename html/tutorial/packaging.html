@@ -1,0 +1,198 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Step 3: Installing flaskr as a Package &#8212; Flask 0.12.2 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.12.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../_static/flask-favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Step 4: Database Connections" href="dbcon.html" />
+    <link rel="prev" title="Step 2: Application Setup Code" href="setup.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+    <link rel="apple-touch-icon" href="../_static/touch-icon.png" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="step-3-installing-flaskr-as-a-package">
+<span id="tutorial-packaging"></span><h1>Step 3: Installing flaskr as a Package<a class="headerlink" href="#step-3-installing-flaskr-as-a-package" title="Permalink to this headline">¶</a></h1>
+<p>Flask is now shipped with built-in support for <a class="reference external" href="http://click.pocoo.org">Click</a>.  Click provides
+Flask with enhanced and extensible command line utilities.  Later in this
+tutorial you will see exactly how to extend the <code class="docutils literal"><span class="pre">flask</span></code> command line
+interface (CLI).</p>
+<p>A useful pattern to manage a Flask application is to install your app
+following the <a class="reference external" href="https://packaging.python.org">Python Packaging Guide</a>.  Presently this involves
+creating two new files; <code class="file docutils literal"><span class="pre">setup.py</span></code> and <code class="file docutils literal"><span class="pre">MANIFEST.in</span></code> in the
+projects root directory.  You also need to add an <code class="file docutils literal"><span class="pre">__init__.py</span></code>
+file to make the <code class="file docutils literal"><span class="pre">flaskr/flaskr</span></code> directory a package.  After these
+changes, your code structure should be:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">/</span><span class="n">flaskr</span>
+    <span class="o">/</span><span class="n">flaskr</span>
+        <span class="fm">__init__</span><span class="o">.</span><span class="n">py</span>
+        <span class="o">/</span><span class="n">static</span>
+        <span class="o">/</span><span class="n">templates</span>
+        <span class="n">flaskr</span><span class="o">.</span><span class="n">py</span>
+        <span class="n">schema</span><span class="o">.</span><span class="n">sql</span>
+    <span class="n">setup</span><span class="o">.</span><span class="n">py</span>
+    <span class="n">MANIFEST</span><span class="o">.</span><span class="ow">in</span>
+</pre></div>
+</div>
+<p>Create the <code class="docutils literal"><span class="pre">setup.py</span></code> file for <code class="docutils literal"><span class="pre">flaskr</span></code> with the following content:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">setuptools</span> <span class="k">import</span> <span class="n">setup</span>
+
+<span class="n">setup</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;flaskr&#39;</span><span class="p">,</span>
+    <span class="n">packages</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;flaskr&#39;</span><span class="p">],</span>
+    <span class="n">include_package_data</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">install_requires</span><span class="o">=</span><span class="p">[</span>
+        <span class="s1">&#39;flask&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>When using setuptools, it is also necessary to specify any special files
+that should be included in your package (in the <code class="file docutils literal"><span class="pre">MANIFEST.in</span></code>).
+In this case, the static and templates directories need to be included,
+as well as the schema.</p>
+<p>Create the <code class="file docutils literal"><span class="pre">MANIFEST.in</span></code> and add the following lines:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">graft</span> <span class="n">flaskr</span><span class="o">/</span><span class="n">templates</span>
+<span class="n">graft</span> <span class="n">flaskr</span><span class="o">/</span><span class="n">static</span>
+<span class="n">include</span> <span class="n">flaskr</span><span class="o">/</span><span class="n">schema</span><span class="o">.</span><span class="n">sql</span>
+</pre></div>
+</div>
+<p>Next, to simplify locating the application, create the file,
+<code class="file docutils literal"><span class="pre">flaskr/__init__.py</span></code> containing only the following import statement:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">.flaskr</span> <span class="k">import</span> <span class="n">app</span>
+</pre></div>
+</div>
+<p>This import statement brings the application instance into the top-level
+of the application package.  When it is time to run the application, the
+Flask development server needs the location of the app instance.  This
+import statement simplifies the location process.  Without the above
+import statement, the export statement a few steps below would need to be
+<code class="docutils literal"><span class="pre">export</span> <span class="pre">FLASK_APP=flaskr.flaskr</span></code>.</p>
+<p>At this point you should be able to install the application.  As usual, it
+is recommended to install your Flask application within a <a class="reference external" href="https://virtualenv.pypa.io">virtualenv</a>.
+With that said, from the <code class="docutils literal"><span class="pre">flaskr/</span></code> directory, go ahead and install the
+application with:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">--</span><span class="n">editable</span> <span class="o">.</span>
+</pre></div>
+</div>
+<p>The above installation command assumes that it is run within the projects
+root directory, <code class="docutils literal"><span class="pre">flaskr/</span></code>.  The <code class="docutils literal"><span class="pre">editable</span></code> flag allows editing
+source code without having to reinstall the Flask app each time you make
+changes.  The flaskr app is now installed in your virtualenv (see output
+of <code class="docutils literal"><span class="pre">pip</span> <span class="pre">freeze</span></code>).</p>
+<p>With that out of the way, you should be able to start up the application.
+Do this on Mac or Linux with the following commands in <code class="docutils literal"><span class="pre">flaskr/</span></code>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">export</span> <span class="n">FLASK_APP</span><span class="o">=</span><span class="n">flaskr</span>
+<span class="n">export</span> <span class="n">FLASK_DEBUG</span><span class="o">=</span><span class="n">true</span>
+<span class="n">flask</span> <span class="n">run</span>
+</pre></div>
+</div>
+<p>(In case you are on Windows you need to use <code class="docutils literal"><span class="pre">set</span></code> instead of <code class="docutils literal"><span class="pre">export</span></code>).
+The <span class="target" id="index-0"></span><code class="xref std std-envvar docutils literal"><span class="pre">FLASK_DEBUG</span></code> flag enables or disables the interactive debugger.
+<em>Never leave debug mode activated in a production system</em>, because it will
+allow users to execute code on the server!</p>
+<p>You will see a message telling you that server has started along with
+the address at which you can access it in a browser.</p>
+<p>When you head over to the server in your browser, you will get a 404 error
+because we don’t have any views yet.  That will be addressed a little later,
+but first, you should get the database working.</p>
+<div class="admonition-externally-visible-server admonition">
+<p class="first admonition-title">Externally Visible Server</p>
+<p class="last">Want your server to be publicly available?  Check out the
+<a class="reference internal" href="../quickstart.html#public-server"><span class="std std-ref">externally visible server</span></a> section for more
+information.</p>
+</div>
+<p>Continue with <a class="reference internal" href="dbcon.html#tutorial-dbcon"><span class="std std-ref">Step 4: Database Connections</span></a>.</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><p class="logo"><a href="../index.html">
+  <img class="logo" src="../_static/flask.png" alt="Logo"/>
+</a></p><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Tutorial</a><ul>
+      <li>Previous: <a href="setup.html" title="previous chapter">Step 2: Application Setup Code</a></li>
+      <li>Next: <a href="dbcon.html" title="next chapter">Step 4: Database Connections</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/tutorial/packaging.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2010 - 2017, Armin Ronacher.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="../_sources/tutorial/packaging.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

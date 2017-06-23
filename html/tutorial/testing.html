@@ -1,0 +1,207 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Bonus: Testing the Application &#8212; Flask 0.12.2 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.12.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../_static/flask-favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Templates" href="../templating.html" />
+    <link rel="prev" title="Step 8: Adding Style" href="css.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+    <link rel="apple-touch-icon" href="../_static/touch-icon.png" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="bonus-testing-the-application">
+<span id="tutorial-testing"></span><h1>Bonus: Testing the Application<a class="headerlink" href="#bonus-testing-the-application" title="Permalink to this headline">¶</a></h1>
+<p>Now that you have finished the application and everything works as
+expected, it’s probably not a bad idea to add automated tests to simplify
+modifications in the future.  The application above is used as a basic
+example of how to perform unit testing in the <a class="reference internal" href="../testing.html#testing"><span class="std std-ref">Testing Flask Applications</span></a> section of the
+documentation.  Go there to see how easy it is to test Flask applications.</p>
+<div class="section" id="adding-tests-to-flaskr">
+<h2>Adding tests to flaskr<a class="headerlink" href="#adding-tests-to-flaskr" title="Permalink to this headline">¶</a></h2>
+<p>Assuming you have seen the <a class="reference internal" href="../testing.html#testing"><span class="std std-ref">Testing Flask Applications</span></a> section and have either written
+your own tests for <code class="docutils literal"><span class="pre">flaskr</span></code> or have followed along with the examples
+provided, you might be wondering about ways to organize the project.</p>
+<p>One possible and recommended project structure is:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">flaskr</span><span class="o">/</span>
+    <span class="n">flaskr</span><span class="o">/</span>
+        <span class="fm">__init__</span><span class="o">.</span><span class="n">py</span>
+        <span class="n">static</span><span class="o">/</span>
+        <span class="n">templates</span><span class="o">/</span>
+    <span class="n">tests</span><span class="o">/</span>
+        <span class="n">test_flaskr</span><span class="o">.</span><span class="n">py</span>
+    <span class="n">setup</span><span class="o">.</span><span class="n">py</span>
+    <span class="n">MANIFEST</span><span class="o">.</span><span class="ow">in</span>
+</pre></div>
+</div>
+<p>For now go ahead a create the <code class="file docutils literal"><span class="pre">tests/</span></code> directory as well as the
+<code class="file docutils literal"><span class="pre">test_flaskr.py</span></code> file.</p>
+</div>
+<div class="section" id="running-the-tests">
+<h2>Running the tests<a class="headerlink" href="#running-the-tests" title="Permalink to this headline">¶</a></h2>
+<p>At this point you can run the tests. Here <code class="docutils literal"><span class="pre">pytest</span></code> will be used.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Make sure that <code class="docutils literal"><span class="pre">pytest</span></code> is installed in the same virtualenv
+as flaskr. Otherwise <code class="docutils literal"><span class="pre">pytest</span></code> test will not be able to import the
+required components to test the application:</p>
+<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">pytest</span>
+</pre></div>
+</div>
+</div>
+<p>Run and watch the tests pass, within the top-level <code class="file docutils literal"><span class="pre">flaskr/</span></code>
+directory as:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pytest</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="testing-setuptools">
+<h2>Testing + setuptools<a class="headerlink" href="#testing-setuptools" title="Permalink to this headline">¶</a></h2>
+<p>One way to handle testing is to integrate it with <code class="docutils literal"><span class="pre">setuptools</span></code>. Here
+that requires adding a couple of lines to the <code class="file docutils literal"><span class="pre">setup.py</span></code> file and
+creating a new file <code class="file docutils literal"><span class="pre">setup.cfg</span></code>. One benefit of running the tests
+this way is that you do not have to install <code class="docutils literal"><span class="pre">pytest</span></code>. Go ahead and
+update the <code class="file docutils literal"><span class="pre">setup.py</span></code> file to contain:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">setuptools</span> <span class="k">import</span> <span class="n">setup</span>
+
+<span class="n">setup</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;flaskr&#39;</span><span class="p">,</span>
+    <span class="n">packages</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;flaskr&#39;</span><span class="p">],</span>
+    <span class="n">include_package_data</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">install_requires</span><span class="o">=</span><span class="p">[</span>
+        <span class="s1">&#39;flask&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="n">setup_requires</span><span class="o">=</span><span class="p">[</span>
+        <span class="s1">&#39;pytest-runner&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="n">tests_require</span><span class="o">=</span><span class="p">[</span>
+        <span class="s1">&#39;pytest&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Now create <code class="file docutils literal"><span class="pre">setup.cfg</span></code> in the project root (alongside
+<code class="file docutils literal"><span class="pre">setup.py</span></code>):</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">aliases</span><span class="p">]</span>
+<span class="n">test</span><span class="o">=</span><span class="n">pytest</span>
+</pre></div>
+</div>
+<p>Now you can run:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">test</span>
+</pre></div>
+</div>
+<p>This calls on the alias created in <code class="file docutils literal"><span class="pre">setup.cfg</span></code> which in turn runs
+<code class="docutils literal"><span class="pre">pytest</span></code> via <code class="docutils literal"><span class="pre">pytest-runner</span></code>, as the <code class="file docutils literal"><span class="pre">setup.py</span></code> script has
+been called. (Recall the <cite>setup_requires</cite> argument in <code class="file docutils literal"><span class="pre">setup.py</span></code>)
+Following the standard rules of test-discovery your tests will be
+found, run, and hopefully pass.</p>
+<p>This is one possible way to run and manage testing.  Here <code class="docutils literal"><span class="pre">pytest</span></code> is
+used, but there are other options such as <code class="docutils literal"><span class="pre">nose</span></code>.  Integrating testing
+with <code class="docutils literal"><span class="pre">setuptools</span></code> is convenient because it is not necessary to actually
+download <code class="docutils literal"><span class="pre">pytest</span></code> or any other testing framework one might use.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><p class="logo"><a href="../index.html">
+  <img class="logo" src="../_static/flask.png" alt="Logo"/>
+</a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Bonus: Testing the Application</a><ul>
+<li><a class="reference internal" href="#adding-tests-to-flaskr">Adding tests to flaskr</a></li>
+<li><a class="reference internal" href="#running-the-tests">Running the tests</a></li>
+<li><a class="reference internal" href="#testing-setuptools">Testing + setuptools</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Tutorial</a><ul>
+      <li>Previous: <a href="css.html" title="previous chapter">Step 8: Adding Style</a></li>
+      <li>Next: <a href="../templating.html" title="next chapter">Templates</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/tutorial/testing.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2010 - 2017, Armin Ronacher.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="../_sources/tutorial/testing.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

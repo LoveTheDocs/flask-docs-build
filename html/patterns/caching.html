@@ -1,0 +1,178 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Caching &#8212; Flask 0.12.2 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.12.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../_static/flask-favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="View Decorators" href="viewdecorators.html" />
+    <link rel="prev" title="Uploading Files" href="fileuploads.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+    <link rel="apple-touch-icon" href="../_static/touch-icon.png" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="caching">
+<span id="caching-pattern"></span><h1>Caching<a class="headerlink" href="#caching" title="Permalink to this headline">¶</a></h1>
+<p>When your application runs slow, throw some caches in.  Well, at least
+it’s the easiest way to speed up things.  What does a cache do?  Say you
+have a function that takes some time to complete but the results would
+still be good enough if they were 5 minutes old.  So then the idea is that
+you actually put the result of that calculation into a cache for some
+time.</p>
+<p>Flask itself does not provide caching for you, but Werkzeug, one of the
+libraries it is based on, has some very basic cache support.  It supports
+multiple cache backends, normally you want to use a memcached server.</p>
+<div class="section" id="setting-up-a-cache">
+<h2>Setting up a Cache<a class="headerlink" href="#setting-up-a-cache" title="Permalink to this headline">¶</a></h2>
+<p>You create a cache object once and keep it around, similar to how
+<a class="reference internal" href="../api.html#flask.Flask" title="flask.Flask"><code class="xref py py-class docutils literal"><span class="pre">Flask</span></code></a> objects are created.  If you are using the
+development server you can create a
+<a class="reference external" href="http://werkzeug.pocoo.org/docs/contrib/cache/#werkzeug.contrib.cache.SimpleCache" title="(in Werkzeug v0.13-dev)"><code class="xref py py-class docutils literal"><span class="pre">SimpleCache</span></code></a> object, that one is a simple
+cache that keeps the item stored in the memory of the Python interpreter:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">werkzeug.contrib.cache</span> <span class="k">import</span> <span class="n">SimpleCache</span>
+<span class="n">cache</span> <span class="o">=</span> <span class="n">SimpleCache</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>If you want to use memcached, make sure to have one of the memcache modules
+supported (you get them from <a class="reference external" href="https://pypi.python.org/pypi">PyPI</a>) and a
+memcached server running somewhere.  This is how you connect to such an
+memcached server then:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">werkzeug.contrib.cache</span> <span class="k">import</span> <span class="n">MemcachedCache</span>
+<span class="n">cache</span> <span class="o">=</span> <span class="n">MemcachedCache</span><span class="p">([</span><span class="s1">&#39;127.0.0.1:11211&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>If you are using App Engine, you can connect to the App Engine memcache
+server easily:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">werkzeug.contrib.cache</span> <span class="k">import</span> <span class="n">GAEMemcachedCache</span>
+<span class="n">cache</span> <span class="o">=</span> <span class="n">GAEMemcachedCache</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="using-a-cache">
+<h2>Using a Cache<a class="headerlink" href="#using-a-cache" title="Permalink to this headline">¶</a></h2>
+<p>Now how can one use such a cache?  There are two very important
+operations: <a class="reference external" href="http://werkzeug.pocoo.org/docs/contrib/cache/#werkzeug.contrib.cache.BaseCache.get" title="(in Werkzeug v0.13-dev)"><code class="xref py py-meth docutils literal"><span class="pre">get()</span></code></a> and
+<a class="reference external" href="http://werkzeug.pocoo.org/docs/contrib/cache/#werkzeug.contrib.cache.BaseCache.set" title="(in Werkzeug v0.13-dev)"><code class="xref py py-meth docutils literal"><span class="pre">set()</span></code></a>.  This is how to use them:</p>
+<p>To get an item from the cache call
+<a class="reference external" href="http://werkzeug.pocoo.org/docs/contrib/cache/#werkzeug.contrib.cache.BaseCache.get" title="(in Werkzeug v0.13-dev)"><code class="xref py py-meth docutils literal"><span class="pre">get()</span></code></a> with a string as key name.
+If something is in the cache, it is returned.  Otherwise that function
+will return <code class="docutils literal"><span class="pre">None</span></code>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">rv</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;my-item&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To add items to the cache, use the <a class="reference external" href="http://werkzeug.pocoo.org/docs/contrib/cache/#werkzeug.contrib.cache.BaseCache.set" title="(in Werkzeug v0.13-dev)"><code class="xref py py-meth docutils literal"><span class="pre">set()</span></code></a>
+method instead.  The first argument is the key and the second the value
+that should be set.  Also a timeout can be provided after which the cache
+will automatically remove item.</p>
+<p>Here a full example how this looks like normally:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_my_item</span><span class="p">():</span>
+    <span class="n">rv</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;my-item&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">rv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">rv</span> <span class="o">=</span> <span class="n">calculate_value</span><span class="p">()</span>
+        <span class="n">cache</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;my-item&#39;</span><span class="p">,</span> <span class="n">rv</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">5</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">rv</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><p class="logo"><a href="../index.html">
+  <img class="logo" src="../_static/flask.png" alt="Logo"/>
+</a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Caching</a><ul>
+<li><a class="reference internal" href="#setting-up-a-cache">Setting up a Cache</a></li>
+<li><a class="reference internal" href="#using-a-cache">Using a Cache</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Patterns for Flask</a><ul>
+      <li>Previous: <a href="fileuploads.html" title="previous chapter">Uploading Files</a></li>
+      <li>Next: <a href="viewdecorators.html" title="next chapter">View Decorators</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/patterns/caching.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2010 - 2017, Armin Ronacher.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="../_sources/patterns/caching.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
